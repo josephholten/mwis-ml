@@ -83,6 +83,7 @@ set(SOURCES
         extern/wmis/extern/argtable3-3.0.3/argtable3.c
         )
 
+
 add_library(libsources2 OBJECT ${SOURCES})
 
 set(MWIS-ML_SOURCES
@@ -91,12 +92,11 @@ set(MWIS-ML_SOURCES
 
 add_library(libmwis-ml OBJECT ${MWIS-ML_SOURCES})
 
-find_package(xgboost REQUIRED)
+add_subdirectory(extern/xgboost)
 
-# add_executable(ml-reduce "ml-reduce.cpp" $<TARGET_OBJECTS:libkaffpa3> $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
 add_executable(ml-reduce "app/ml-reduce.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
-target_link_libraries(ml-reduce xgboost::xgboost)
+target_link_libraries(ml-reduce xgboost)
 
 add_executable(ml-train "app/ml-train.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
-target_link_libraries(ml-train xgboost::xgboost)
+target_link_libraries(ml-train xgboost)
 
