@@ -32,8 +32,9 @@
 docs/*
 
 # Compiled binaries
-deploy
+deploy/
 cmake-build-*/
+build/
 
 # IDE files
 .idea/
