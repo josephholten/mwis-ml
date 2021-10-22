@@ -1,16 +1,14 @@
 //
 // Created by joseph on 9/28/21.
 //
-// #include <algorithm>
-
-#include <graph_access.h>
-#include <graph_io.h>
-#include <mis_config.h>
-#include <branch_and_reduce_algorithm.h>
 
 #include <xgboost/c_api.h>
 
-#include "features.h"
+#include <mis_config.h>
+#include <graph_io.h>
+#include <graph_access.h>
+
+#include <ml-features.h>
 
 #define safe_xgboost(call) {                                            \
 int err = (call);                                                       \
@@ -47,7 +45,7 @@ int main(int argn, char** argv) {
     // mis_log::instance()->set_graph(G);
 
     // KaMIS reducer
-    std::unique_ptr<branch_and_reduce_algorithm> reducer;
+    // std::unique_ptr<branch_and_reduce_algorithm> reducer;
 
     // XGBoost predictor
     BoosterHandle predictor;
@@ -139,7 +137,7 @@ int main(int argn, char** argv) {
         R.setNodeWeight(new_node, G.getNodeWeight(node));
 
         forall_out_edges(G, edge, node) {
-            R.new_edge(node, G.getEdgeTarget(edge));
+            R.new_edge(new_node, reverse_mapping[G.getEdgeTarget(edge)]);
         } endfor
     }
     R.finish_construction();

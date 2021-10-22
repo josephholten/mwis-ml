@@ -1,0 +1,2 @@
+../instances/adjnoun.mis
+../instances/power.mis

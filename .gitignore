@@ -37,3 +37,6 @@ cmake-build-*/
 
 # IDE files
 .idea/
+
+# Instances
+/instances

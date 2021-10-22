@@ -7,7 +7,7 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release) 
 endif (NOT CMAKE_BUILD_TYPE)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fno-omit-frame-pointer -march=native -DNDEBUG -fPIC -O3 ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -DNDEBUG -fPIC -O3 -Wpedantic")
 
 CHECK_CXX_COMPILER_FLAG(-Wno-unused-value COMPILER_SUPPORTS_NOUNUSED)
 if(COMPILER_SUPPORTS_NOUNUSED)
@@ -33,9 +33,7 @@ endif()
 include_directories(
         app
         lib
-        lib/algorithms
-        lib/ils
-        lib/tools
+        extern/xgboost/include
 
         extern/wmis/lib
         extern/wmis/lib/data_structure
@@ -82,24 +80,23 @@ set(SOURCES
         extern/wmis/extern/KaHIP/lib/algorithms/strongly_connected_components.cpp
         extern/wmis/extern/KaHIP/lib/algorithms/push_relabel.cpp
 
-
         extern/wmis/extern/argtable3-3.0.3/argtable3.c
         )
 
 add_library(libsources2 OBJECT ${SOURCES})
 
 set(MWIS-ML_SOURCES
-        weighted_ls.cpp
-        )
+        lib/wmis_interface/weighted_ls.cpp
+        lib/ml_reducer.cpp)
 
 add_library(libmwis-ml OBJECT ${MWIS-ML_SOURCES})
 
 find_package(xgboost REQUIRED)
 
 # add_executable(ml-reduce "ml-reduce.cpp" $<TARGET_OBJECTS:libkaffpa3> $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
-add_executable(ml-reduce "ml-reduce.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
+add_executable(ml-reduce "app/ml-reduce.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
 target_link_libraries(ml-reduce xgboost::xgboost)
 
-add_executable(ml-train "ml-train.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
+add_executable(ml-train "app/ml-train.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
 target_link_libraries(ml-train xgboost::xgboost)
 
