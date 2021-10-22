@@ -1,40 +1,27 @@
 //
-// Created by joseph on 9/29/21.
+// Created by joseph on 10/22/21.
 //
 
-#ifndef KAMIS_FEATURES_H
-#define KAMIS_FEATURES_H
+#include "ml_features.h"
 
-// #include <stdio.h>
-// #include <stdlib.h>
+
 #include <sstream>
-#include <iostream>
 #include <fstream>
-#include <iterator>
 #include <graph_access.h>
-#include <graph_io.h>
 
 #include <numeric>
 #include <algorithm>
 #include <unordered_set>
+#include <mis_config.h>
 
 #include "wmis_interface/weighted_ls.h"
 #include "tools/stat.h"
 
-#define safe_xgboost(call) {                                            \
-int err = (call);                                                       \
-if (err != 0) {                                                         \
-    throw std::runtime_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + \
-                        ": error in " + #call  + ":" + XGBGetLastError()); \
-    }                                                                    \
-}
-
-const int FEATURE_NUM = 13;
-enum kw : int { NODES=0, EDGES=1, DEG=2, CHI2_DEG=3, AVG_CHI2_DEG=4, LCC=5, CHI2_LCC=6, CHROMATIC=7, T_WEIGHT=8, NODE_W=9, W_DEG=10, CHI2_W_DEG=11, LOCAL_SEARCH=12 };
+// TODO: extract algorithms
 
 void features(const MISConfig& mis_config, graph_access& G, std::vector<float>::iterator feat_mat) {
     // constants
-    const int ls_rounds = 5;
+    const int ls_rounds = 5;  // TODO: in config object
 
     // precalculation
     const NodeID number_of_nodes = G.number_of_nodes();
@@ -53,7 +40,7 @@ void features(const MISConfig& mis_config, graph_access& G, std::vector<float>::
         forall_out_edges(G, edge, node) {
             available[node_coloring[G.getEdgeTarget(edge)]] = false;
         } endfor
-        node_coloring[node] = (int) (std::find_if(available.begin(), available.end(), [](bool x){ return x; }) - available.begin());
+                node_coloring[node] = (int) (std::find_if(available.begin(), available.end(), [](bool x){ return x; }) - available.begin());
     } endfor
     int greedy_chromatic_number = *std::max_element(node_coloring.begin(), node_coloring.end()) + 1;
     std::vector<bool> used_colors(greedy_chromatic_number);
@@ -105,7 +92,7 @@ void features(const MISConfig& mis_config, graph_access& G, std::vector<float>::
         forall_out_edges(G, edge, node) {
             used_colors[node_coloring[G.getEdgeTarget(edge)]] = true;
         } endfor
-        feat_mat[row_start + CHROMATIC] = (float) std::accumulate(used_colors.begin(), used_colors.end(), 0) / (float) greedy_chromatic_number;
+                feat_mat[row_start + CHROMATIC] = (float) std::accumulate(used_colors.begin(), used_colors.end(), 0) / (float) greedy_chromatic_number;
 
         // total weight
         feat_mat[row_start + T_WEIGHT] = (float) total_weight;
@@ -149,35 +136,3 @@ void features(const MISConfig& mis_config, graph_access& G, std::vector<float>::
         feat_mat[row_start + CHI2_W_DEG] = (float) chi2(feat_mat[row_start + W_DEG], avg_wdeg);
     } endfor
 }
-
-void features_from_paths(const MISConfig& mis_config, const std::vector<std::string>& paths, std::vector<float>& feat_mat) {
-    NodeID total_nodes = 0;
-    for (const auto& path : paths) {
-        graph_access G;
-        total_nodes += graph_io::readNumberOfNodes(G, path);
-    }
-    // TODO: possibly make external memory an option when training on very large sets of graphs
-    feat_mat.resize(total_nodes, 0);
-    NodeID current_end = 0;
-    for (const auto& path : paths) {
-        graph_access G;
-        graph_io::readGraphWeighted(G, path);
-        features(mis_config, G, feat_mat.begin() + current_end);
-        current_end += G.number_of_nodes() * FEATURE_NUM;
-    }
-}
-
-void labels_from_paths(const std::vector<std::string>& paths, typename std::vector<float>::iterator label_vec) {
-    // assume user sizes label_vec accordingly
-    size_t current_end = 0;
-    for (const auto& path : paths) {
-        std::ifstream ifstream(path);
-        if (!ifstream) {
-            std::cerr << "Could not open file " << path << "\n";
-            exit(1);
-        }
-        current_end += graph_io::readVector<float>(label_vec + current_end, path);
-    }
-}
-
-#endif //KAMIS_FEATURES_H

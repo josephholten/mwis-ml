@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 3.10.0)
 
 include(CheckCXXCompilerFlag)
 project(mwis-ml C CXX)
@@ -88,6 +88,8 @@ add_library(libsources2 OBJECT ${SOURCES})
 
 set(MWIS-ML_SOURCES
         lib/wmis_interface/weighted_ls.cpp
+        lib/ml_features.cpp
+        lib/io_wrapper.cpp
         lib/ml_reducer.cpp)
 
 add_library(libmwis-ml OBJECT ${MWIS-ML_SOURCES})

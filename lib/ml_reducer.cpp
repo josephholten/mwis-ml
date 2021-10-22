@@ -2,11 +2,11 @@
 // Created by joseph on 10/16/21.
 //
 
+#include <numeric>
 #include "ml_reducer.h"
+#include "ml_features.h"
 
-#include <utility>
-#include <xgboost/c_api.h>
-
+#include "safe_c_api.h"
 
 ml_reducer::ml_reducer(MISConfig _mis_config, graph_access& _graph, const float _q) : G {_graph}, mis_config {std::move(_mis_config)}, q {_q} {
 

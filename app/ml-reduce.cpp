@@ -2,21 +2,15 @@
 // Created by joseph on 9/28/21.
 //
 
-#include <xgboost/c_api.h>
+#include <numeric>
+#include "safe_c_api.h"
 
-#include <mis_config.h>
-#include <graph_io.h>
-#include <graph_access.h>
+#include "mis_config.h"
+#include "graph_io.h"
+#include "graph_access.h"
 
-#include <ml-features.h>
+#include "ml_features.h"
 
-#define safe_xgboost(call) {                                            \
-int err = (call);                                                       \
-if (err != 0) {                                                         \
-    throw std::runtime_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + \
-                        ": error in " + #call  + ":" + XGBGetLastError()); \
-    }                                                                    \
-}
 
 int main(int argn, char** argv) {
     // mis_log::instance()->restart_total_timer();

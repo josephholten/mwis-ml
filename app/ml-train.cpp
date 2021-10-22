@@ -1,34 +1,18 @@
 //
 // Created by joseph on 10/14/21.
 //
-#include <xgboost/c_api.h>
+#include <fstream>
+#include "safe_c_api.h"
 
-#include <mis_config.h>
-#include <graph_access.h>
+#include "mis_config.h"
+#include "graph_access.h"
 
-#include <ml-features.h>
+#include "ml_features.h"
+#include "io_wrapper.h"
 
-#define safe_xgboost(call) {                                            \
-int err = (call);                                                       \
-if (err != 0) {                                                         \
-    throw std::runtime_error(std::string(__FILE__) + ":" + std::to_string(__LINE__) + \
-                        ": error in " + #call  + ":" + XGBGetLastError()); \
-    }                                                                    \
-}
 
-std::vector<std::string> split_file_by_lines(const std::string& path) {
-    std::vector<std::string> lines;
-    std::ifstream ifstream(path);
-    if (!ifstream) {
-        std::cerr << "Could not open file " << path << "\n";
-        exit(1);
-    }
-    std::string line;
-    while (std::getline(ifstream, line)) {
-        lines.push_back(line);
-    }
-    return lines;
-}
+
+
 
 
 

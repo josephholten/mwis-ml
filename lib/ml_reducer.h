@@ -9,8 +9,6 @@
 #include <mis_config.h>
 #include <branch_and_reduce_algorithm.h>
 
-#include <ml-features.h>
-
 class ml_reducer {
 private:
     const float q;  // confidence niveau
