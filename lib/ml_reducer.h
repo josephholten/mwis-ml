@@ -13,7 +13,7 @@ class ml_reducer {
 private:
     const float q;  // confidence niveau
     graph_access& G; // graph
-    const MISConfig mis_config;
+    MISConfig mis_config;
 
 public:
     explicit ml_reducer(MISConfig mis_config, graph_access& G, float q);

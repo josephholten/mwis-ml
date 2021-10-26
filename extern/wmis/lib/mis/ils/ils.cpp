@@ -83,7 +83,8 @@ void ils::perform_ils(graph_access& G, unsigned int iteration_limit, int offset)
         iterations++;
         // Stop if the time limit was passed
         if (best_solution_weight > last_best_weight) {
-			std::cout << best_solution_weight+offset << " [" << t.elapsed() << ", " << perm->added_vertices << "]" << std::endl; 
+            if (config.console_log)
+                std::cout << best_solution_weight+offset << " [" << t.elapsed() << ", " << perm->added_vertices << "]" << std::endl; 
             last_best_weight = best_solution_weight;
 		}
         if (t.elapsed() > config.time_limit) break;

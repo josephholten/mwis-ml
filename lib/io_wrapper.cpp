@@ -7,7 +7,7 @@
 #include "graph_io.h"
 #include "ml_features.h"
 
-void features_from_paths(const MISConfig& mis_config, const std::vector<std::string>& paths, std::vector<float>& feat_mat) {
+void features_from_paths(MISConfig& mis_config, const std::vector<std::string>& paths, std::vector<float>& feat_mat) {
     NodeID total_nodes = 0;
     for (const auto& path : paths) {
         graph_access G;
@@ -19,6 +19,7 @@ void features_from_paths(const MISConfig& mis_config, const std::vector<std::str
     for (const auto& path : paths) {
         graph_access G;
         graph_io::readGraphWeighted(G, path);
+        std::cout << "LOG: ml-features: calculating features for " << path << "\n";
         features(mis_config, G, feat_mat.begin() + current_end);
         current_end += G.number_of_nodes() * FEATURE_NUM;
     }
@@ -46,6 +47,8 @@ std::vector<std::string> split_file_by_lines(const std::string& path) {
     }
     std::string line;
     while (std::getline(ifstream, line)) {
+        if (line[0] == '#')
+            continue;
         lines.push_back(line);
     }
     return lines;

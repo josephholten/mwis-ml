@@ -29,20 +29,22 @@ int main(int argn, char** argv) {
 
     // get combined feature matrices for training and testing graphs
     std::vector<float> train_feat, train_labels, test_feat, test_labels;
+    std::cout << "LOG: ml-train: getting feature matrices\n";
     features_from_paths(mis_config, split_file_by_lines(train_graphs_path), train_feat);
     features_from_paths(mis_config, split_file_by_lines(test_graph_path), test_feat);
 
-    // make DMatrices
+    // set labels used in training
+    train_labels.resize(train_feat.size() / FEATURE_NUM);  // number of rows of feature matrix
+    test_labels.resize(test_feat.size() / FEATURE_NUM);    // number of rows of feature matrix
+    labels_from_paths(split_file_by_lines(train_graphs_path), train_labels.begin());
+    labels_from_paths(split_file_by_lines(test_graph_path), test_labels.begin());
+
+    // make DMatrices from feature matrices
     DMatrixHandle dtrain, dtest;
     XGDMatrixCreateFromMat(&train_feat[0], train_feat.size(), FEATURE_NUM, 0, &dtrain);
     XGDMatrixCreateFromMat(&test_feat[0], train_feat.size(), FEATURE_NUM, 0, &dtest);
 
-    // set labels used in training
-    train_labels.resize(train_feat.size() / FEATURE_NUM);  // number of rows of feature matrix
-    test_labels.resize(test_feat.size() / FEATURE_NUM);  // number of rows of feature matrix
-    labels_from_paths(split_file_by_lines(train_graphs_path), train_labels.begin());
-    labels_from_paths(split_file_by_lines(test_graph_path), test_labels.begin());
-
+    // set labels in the dmatrices
     XGDMatrixSetFloatInfo(dtrain, "label", &train_labels[0], train_labels.size());
     XGDMatrixSetFloatInfo(dtest, "label", &test_labels[0], test_labels.size());
 
@@ -63,10 +65,13 @@ int main(int argn, char** argv) {
     safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
     safe_xgboost(XGBoosterSetParam(booster, "verbosity", "1"));
 
+    std::cout << "LOG: ml-train: starting training\n";
     int n_trees = 10;
     const char *eval_names[2] = {"train", "test"};
     const char *eval_result = nullptr;
+
     for (int i = 0; i < n_trees; ++i) {
+        std::cout << "LOG: ml-train: round " << i << "of training\n";
         safe_xgboost(XGBoosterUpdateOneIter(booster, i, dtrain));
         safe_xgboost(XGBoosterEvalOneIter(booster, i, eval_dmats, eval_names, 2, &eval_result));
         printf("%s\n", eval_result);
@@ -81,6 +86,8 @@ int main(int argn, char** argv) {
     struct tm* t = localtime(&now);
     char time_stamp_name[50];
     strftime(time_stamp_name, sizeof(time_stamp_name), "../models/%y-%m-%d_%H-%M-%S.model", t);
+
+    std::cout << "LOG: ml-train: saving model into ../models/latest.model and " << time_stamp_name << "\n";
     safe_xgboost(XGBoosterSaveModel(booster, "../models/latest.model"));
     safe_xgboost(XGBoosterSaveModel(booster, time_stamp_name));
     // }

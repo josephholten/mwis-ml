@@ -4,24 +4,24 @@
 
 #include "ml_features.h"
 
-
 #include <sstream>
 #include <fstream>
-#include <graph_access.h>
 
 #include <numeric>
 #include <algorithm>
 #include <unordered_set>
-#include <mis_config.h>
+#include <random>
 
+#include "mis_config.h"
+#include "graph_access.h"
 #include "wmis_interface/weighted_ls.h"
 #include "tools/stat.h"
+#include "tools/timer.h"
+
 
 // TODO: extract algorithms
 
-void features(const MISConfig& mis_config, graph_access& G, std::vector<float>::iterator feat_mat) {
-    // constants
-    const int ls_rounds = 5;  // TODO: in config object
+void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterator feat_mat) {
 
     // precalculation
     const NodeID number_of_nodes = G.number_of_nodes();
@@ -35,24 +35,39 @@ void features(const MISConfig& mis_config, graph_access& G, std::vector<float>::
     // greedy node coloring
     std::vector<int> node_coloring(G.number_of_nodes());
     std::vector<bool> available(G.number_of_nodes(), true);
+    std::cout << "LOG: ml-features: starting greedy node coloring  ..." << std::flush;
     forall_nodes(G, node) {
         std::fill(available.begin(), available.end(), true);
         forall_out_edges(G, edge, node) {
             available[node_coloring[G.getEdgeTarget(edge)]] = false;
         } endfor
-                node_coloring[node] = (int) (std::find_if(available.begin(), available.end(), [](bool x){ return x; }) - available.begin());
+        node_coloring[node] = (int) (std::find_if(available.begin(), available.end(), [](bool x){ return x; }) - available.begin());
     } endfor
     int greedy_chromatic_number = *std::max_element(node_coloring.begin(), node_coloring.end()) + 1;
     std::vector<bool> used_colors(greedy_chromatic_number);
+    std::cout << " done.\n";
 
     // local search
     std::vector<int> ls_signal(G.number_of_nodes(), 0);
+    const int ls_rounds = 5;  // TODO: in config object
+    mis_config.time_limit = 5.0;
+    mis_config.console_log = false;
+
+    timer t;
+    std::random_device rd;
+
+    // TODO: log correctly
     for (int round = 0; round < ls_rounds; ++round) {
-        // TODO: configure mis_config with timelimit and randomness
+        mis_config.seed = rd();
+        std::cout << "LOG: ml-features: starting ls round " << round << " ... " << std::flush;
+        t.restart();
         perform_ils(mis_config, G, 0);
         forall_nodes(G, node) {
             ls_signal[node] += G.getPartitionIndex(node);
         } endfor
+        std::cout << "done"
+                  << " (" << t.elapsed() << "s)"
+                  << ".\n";
     }
 
     // loop variables
@@ -62,6 +77,7 @@ void features(const MISConfig& mis_config, graph_access& G, std::vector<float>::
     float avg_lcc = 0;
     float avg_wdeg = 0;
 
+    std::cout << "LOG: ml-features: starting filling matrix ...";
     forall_nodes(G, node){
         const NodeID row_start = node*FEATURE_NUM;
 
@@ -135,4 +151,5 @@ void features(const MISConfig& mis_config, graph_access& G, std::vector<float>::
 
         feat_mat[row_start + CHI2_W_DEG] = (float) chi2(feat_mat[row_start + W_DEG], avg_wdeg);
     } endfor
+    std::cout << " done.\n";
 }
