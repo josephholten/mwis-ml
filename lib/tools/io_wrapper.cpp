@@ -14,7 +14,7 @@ void features_from_paths(MISConfig& mis_config, const std::vector<std::string>& 
         total_nodes += graph_io::readNumberOfNodes(G, path);
     }
     // TODO: possibly make external memory an option when training on very large sets of graphs
-    feat_mat.resize(total_nodes, 0);
+    feat_mat.resize(total_nodes*FEATURE_NUM, 0);
     NodeID current_end = 0;
     for (const auto& path : paths) {
         graph_access G;

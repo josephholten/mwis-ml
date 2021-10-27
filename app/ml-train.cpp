@@ -8,7 +8,7 @@
 #include "graph_access.h"
 
 #include "ml_features.h"
-#include "io_wrapper.h"
+#include "tools/io_wrapper.h"
 
 int main(int argn, char** argv) {
 

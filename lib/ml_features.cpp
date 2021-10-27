@@ -53,7 +53,7 @@ void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterat
     const int ls_rounds = 5;  // TODO: in config
     configuration_mis cfg;
     cfg.standard(mis_config);
-    mis_config.console_log = true;
+    mis_config.console_log = false;
     mis_config.time_limit = 5.0;
 
     timer t;
