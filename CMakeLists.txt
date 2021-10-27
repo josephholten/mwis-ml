@@ -91,7 +91,7 @@ set(MWIS-ML_SOURCES
         lib/ml_features.cpp
         lib/tools/io_wrapper.cpp
         lib/ml_reducer.cpp
-        lib/data_structures/feature_matrix.cpp lib/data_structures/feature_matrix.h)
+        lib/data_structures/ml_features.cpp lib/data_structures/ml_features.h)
 
 add_library(libmwis-ml OBJECT ${MWIS-ML_SOURCES})
 

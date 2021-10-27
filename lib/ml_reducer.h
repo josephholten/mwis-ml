@@ -18,8 +18,10 @@ private:
 public:
     explicit ml_reducer(MISConfig mis_config, graph_access& G, float q);
 
+    void train_model();
     void ml_reduce(graph_access& R, std::vector<NodeID>& reverse_mapping);
     void iterative_reduce();
+
 };
 
 
