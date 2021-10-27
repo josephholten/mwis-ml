@@ -58,12 +58,13 @@ void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterat
 
     // TODO: log correctly
     for (int round = 0; round < ls_rounds; ++round) {
-        mis_config.seed = rd();
+        mis_config.seed = (int) rd();
         std::cout << "LOG: ml-features: starting ls round " << round << " ... " << std::flush;
         t.restart();
-        perform_ils(mis_config, G, 0);
+        weighted_ls ls(mis_config, G);
+        ls.run_ils();
         forall_nodes(G, node) {
-            ls_signal[node] += G.getPartitionIndex(node);
+            ls_signal[node] += (int) G.getPartitionIndex(node);
         } endfor
         std::cout << "done"
                   << " (" << t.elapsed() << "s)"
