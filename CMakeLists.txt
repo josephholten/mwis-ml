@@ -90,7 +90,8 @@ set(MWIS-ML_SOURCES
         lib/wmis_interface/weighted_ls.cpp
         lib/ml_features.cpp
         lib/tools/io_wrapper.cpp
-        lib/ml_reducer.cpp)
+        lib/ml_reducer.cpp
+        lib/data_structures/feature_matrix.cpp lib/data_structures/feature_matrix.h)
 
 add_library(libmwis-ml OBJECT ${MWIS-ML_SOURCES})
 

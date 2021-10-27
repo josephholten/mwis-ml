@@ -23,6 +23,7 @@
 // TODO: extract algorithms
 
 void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterator feat_mat) {
+    timer t;
 
     // precalculation
     const NodeID number_of_nodes = G.number_of_nodes();
@@ -37,6 +38,7 @@ void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterat
     std::vector<int> node_coloring(G.number_of_nodes());
     std::vector<bool> available(G.number_of_nodes(), true);
     std::cout << "LOG: ml-features: starting greedy node coloring  ..." << std::flush;
+
     forall_nodes(G, node) {
         std::fill(available.begin(), available.end(), true);
         forall_out_edges(G, edge, node) {
@@ -56,7 +58,6 @@ void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterat
     mis_config.console_log = false;
     mis_config.time_limit = 5.0;
 
-    timer t;
     std::random_device rd;
 
     // TODO: log correctly
@@ -66,11 +67,13 @@ void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterat
         t.restart();
         weighted_ls ls(mis_config, G);
         ls.run_ils();
+        auto t_ils = t.elapsed();
+        t.restart();
         forall_nodes(G, node) {
             ls_signal[node] += (int) G.getPartitionIndex(node);
         } endfor
         std::cout << "done"
-                  << " (" << t.elapsed() << "s)"
+                  << " (ils: " << t_ils << ", signal: " << t.elapsed() << "s)"
                   << ".\n";
     }
 
@@ -81,7 +84,8 @@ void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterat
     float avg_lcc = 0;
     float avg_wdeg = 0;
 
-    std::cout << "LOG: ml-features: starting filling matrix ...";
+    std::cout << "LOG: ml-features: starting filling matrix ..." << std::flush;
+    t.restart();
     forall_nodes(G, node){
         const NodeID row_start = node*FEATURE_NUM;
 
@@ -155,5 +159,7 @@ void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterat
 
         feat_mat[row_start + CHI2_W_DEG] = (float) chi2(feat_mat[row_start + W_DEG], avg_wdeg);
     } endfor
-    std::cout << " done.\n";
+    std::cout << "done"
+              << " (" << t.elapsed() <<  "s)"
+              << ".\n";
 }

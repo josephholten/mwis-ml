@@ -8,6 +8,7 @@
 - make feature matrix class, implemented just using vector and iterator
     * should also be able to create single matrix for multiple graphs
 - merge training into ml_reduce class
+- good logging (with seperate timing - only in debug mode)
 
 ### Prerequisites
 
