@@ -13,6 +13,7 @@
 #include <random>
 
 #include "mis_config.h"
+#include "configuration_mis.h"
 #include "graph_access.h"
 #include "wmis_interface/weighted_ls.h"
 #include "tools/stat.h"
@@ -49,9 +50,11 @@ void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterat
 
     // local search
     std::vector<int> ls_signal(G.number_of_nodes(), 0);
-    const int ls_rounds = 5;  // TODO: in config object
+    const int ls_rounds = 5;  // TODO: in config
+    configuration_mis cfg;
+    cfg.standard(mis_config);
+    mis_config.console_log = true;
     mis_config.time_limit = 5.0;
-    mis_config.console_log = false;
 
     timer t;
     std::random_device rd;
