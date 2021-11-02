@@ -3,13 +3,13 @@
 //
 
 #include <numeric>
-#include "safe_c_api.h"
+#include "tools/safe_c_api.h"
 
 #include "mis_config.h"
 #include "graph_io.h"
 #include "graph_access.h"
 
-#include "ml_features.h"
+#include "ml/ml_features_old.h"
 
 
 int main(int argn, char** argv) {

@@ -325,7 +325,7 @@ int graph_io::readGraphWeighted(graph_access & G, const std::string & filename, 
         return 0;
 }
 
-NodeID graph_io::readNumberOfNodes(graph_access &G, const std::string &filename) {
+NodeID graph_io::readNumberOfNodes(const std::string &filename) {
     std::string line;
 
     // open file for reading
@@ -374,3 +374,4 @@ void graph_io::writeIndependentSet(graph_access & G, std::string filename) {
 
         f.close();
 }
+

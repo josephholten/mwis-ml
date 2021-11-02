@@ -88,10 +88,10 @@ add_library(libsources2 OBJECT ${SOURCES})
 
 set(MWIS-ML_SOURCES
         lib/wmis_interface/weighted_ls.cpp
-        lib/ml_features.cpp
+        lib/ml/ml_features_old.cpp
         lib/tools/io_wrapper.cpp
-        lib/ml_reducer.cpp
-        lib/data_structures/ml_features.cpp lib/data_structures/ml_features.h)
+        lib/ml/ml_reducer.cpp
+        lib/ml/ml_features.cpp lib/tools/MLConfig.cpp lib/tools/MLConfig.h)
 
 add_library(libmwis-ml OBJECT ${MWIS-ML_SOURCES})
 

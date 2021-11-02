@@ -28,7 +28,7 @@ class graph_io {
                 int readGraphWeighted(graph_access & G, const std::string & filename);
 
                 static
-                NodeID readNumberOfNodes(graph_access & G, const std::string & filename);
+                NodeID readNumberOfNodes(const std::string & filename);
 
                 static 
                 int readGraphWeighted(graph_access & G, const std::string & filename, std::string & comments);
@@ -59,12 +59,6 @@ class graph_io {
 
                 template<typename vectortype>
                 static void readVector(std::vector<vectortype> & vec, const std::string & filename);
-
-                template<typename vectortype>
-                static size_t readVector(typename std::vector<vectortype>::iterator vec, const std::string & filename);
-
-
-
 };
 
 template<typename vectortype>
@@ -85,8 +79,8 @@ void graph_io::readVector(std::vector<vectortype> & vec, const std::string & fil
         // open file for reading
         std::ifstream in(filename.c_str());
         if (!in) {
-                std::cerr << "Error opening vectorfile" << filename << std::endl;
-                return;
+                std::cerr << "Error opening vectorfile " << filename << std::endl;
+                exit(1);
         }
 
         unsigned pos = 0;
@@ -104,33 +98,4 @@ void graph_io::readVector(std::vector<vectortype> & vec, const std::string & fil
         in.close();
 }
 
-// assuming user has sized vector accordingly
-template<typename vectortype>
-size_t graph_io::readVector(typename std::vector<vectortype>::iterator vec, const std::string & filename) {
-
-    std::string line;
-
-    // open file for reading
-    std::ifstream in(filename.c_str());
-    if (!in) {
-        std::cerr << "Error opening vectorfile" << filename << std::endl;
-        return -1;
-    }
-
-    unsigned pos = 0;
-    std::getline(in, line);
-    while( !in.eof() ) {
-        if (line[0] == '%') { //Comment
-            continue;
-        }
-
-        auto value = (vectortype) atof(line.c_str());
-        vec[pos++] = value;
-        std::getline(in, line);
-    }
-
-    in.close();
-
-    return pos;
-}
 #endif /*GRAPHIO_H_*/

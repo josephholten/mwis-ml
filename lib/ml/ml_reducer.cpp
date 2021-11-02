@@ -4,20 +4,25 @@
 
 #include <numeric>
 #include "ml_reducer.h"
-#include "ml_features.h"
+#include "ml_features_old.h"
 
-#include "safe_c_api.h"
+#include "tools/safe_c_api.h"
 
 #include <fstream>
 
 #include "mis_config.h"
 #include "graph_access.h"
 
-#include "ml_features.h"
+#include "ml_features_old.h"
 #include "tools/io_wrapper.h"
+#include "ml_features.h"
 
-ml_reducer::ml_reducer(MISConfig _mis_config, graph_access& _graph, const float _q) : G {_graph}, mis_config {std::move(_mis_config)}, q {_q} {
+ml_reducer::ml_reducer(MISConfig _mis_config, const float _q) : mis_config {std::move(_mis_config)}, q {_q} {
 
+}
+
+ml_reducer::~ml_reducer() noexcept(false) {
+    safe_xgboost(XGBoosterFree(booster));
 }
 
 void ml_reducer::train_model() {
@@ -27,29 +32,20 @@ void ml_reducer::train_model() {
     std::string test_label_path("../test_labels_list.txt");
 
     // get combined feature matrices for training and testing graphs
-    std::vector<float> train_feat, train_labels, test_feat, test_labels;
+    ml_features train_features(mis_config), test_features(mis_config);
     std::cout << "LOG: ml-train: getting feature matrices\n";
-    features_from_paths(mis_config, split_file_by_lines(train_graphs_path), train_feat);
-    features_from_paths(mis_config, split_file_by_lines(test_graph_path), test_feat);
 
-    // set labels used in training
-    train_labels.resize(train_feat.size() / FEATURE_NUM);  // number of rows of feature matrix
-    test_labels.resize(test_feat.size() / FEATURE_NUM);    // number of rows of feature matrix
-    labels_from_paths(split_file_by_lines(train_graphs_path), train_labels.begin());
-    labels_from_paths(split_file_by_lines(test_graph_path), test_labels.begin());
+    train_features.fromPaths(split_file_by_lines(train_graphs_path),
+                             split_file_by_lines(train_labels_path));
+    train_features.fromPaths(split_file_by_lines(test_graph_path),
+                             split_file_by_lines(test_label_path));
 
-    // make DMatrices from feature matrices
-    DMatrixHandle dtrain, dtest;
-    XGDMatrixCreateFromMat(&train_feat[0], train_feat.size(), FEATURE_NUM, 0, &dtrain);
-    XGDMatrixCreateFromMat(&test_feat[0], train_feat.size(), FEATURE_NUM, 0, &dtest);
-
-    // set labels in the dmatrices
-    XGDMatrixSetFloatInfo(dtrain, "label", &train_labels[0], train_labels.size());
-    XGDMatrixSetFloatInfo(dtest, "label", &test_labels[0], test_labels.size());
+    // initialize DMatrices in with feature and label data
+    train_features.initDMatrix();
+    test_features.initDMatrix();
 
     // create booster
-    BoosterHandle booster;
-    DMatrixHandle eval_dmats[2] = {dtrain, dtest};
+    DMatrixHandle eval_dmats[2] = {train_features.getDMatrix(), test_features.getDMatrix()};
     safe_xgboost(XGBoosterCreate(eval_dmats, 2, &booster));
 
     // parameters
@@ -71,7 +67,7 @@ void ml_reducer::train_model() {
 
     for (int i = 0; i < n_trees; ++i) {
         std::cout << "LOG: ml-train: round " << i << "of training\n";
-        safe_xgboost(XGBoosterUpdateOneIter(booster, i, dtrain));
+        safe_xgboost(XGBoosterUpdateOneIter(booster, i, train_features.getDMatrix()));
         safe_xgboost(XGBoosterEvalOneIter(booster, i, eval_dmats, eval_names, 2, &eval_result));
         printf("%s\n", eval_result);
     }
@@ -80,42 +76,33 @@ void ml_reducer::train_model() {
     safe_xgboost(XGBoosterGetNumFeature(booster, &num_feature));
     printf("num_feature: %lu\n", (unsigned long) (num_feature));
 
-    // if (mis_config.save_model) {
+    // if (mis_config.predict_test) {
+
+    // }
+}
+
+void ml_reducer::save_model() {
+    // create timestamp name
     time_t now = time(nullptr);
     struct tm* t = localtime(&now);
     char time_stamp_name[50];
     strftime(time_stamp_name, sizeof(time_stamp_name), "../models/%y-%m-%d_%H-%M-%S.model", t);
 
+    // saving model
     std::cout << "LOG: ml-train: saving model into ../models/latest.model and " << time_stamp_name << "\n";
     safe_xgboost(XGBoosterSaveModel(booster, "../models/latest.model"));
     safe_xgboost(XGBoosterSaveModel(booster, time_stamp_name));
-    // }
-
-    // if (mis_config.predict_test) {
-
-    // }
-
-    // freeing
-    safe_xgboost(XGBoosterFree(booster));
-    safe_xgboost(XGDMatrixFree(dtrain));
-    safe_xgboost(XGDMatrixFree(dtest));
-
-
 }
 
-void ml_reducer::ml_reduce(graph_access& R, std::vector<NodeID>& reverse_mapping) { // R is the ml reduced graph
-    // XGBoost predictor
-    BoosterHandle predictor;
-    safe_xgboost(XGBoosterCreate(nullptr, 0, &predictor));
+void ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping) { // R is the ml reduced graph
+    safe_xgboost(XGBoosterCreate(nullptr, 0, &booster));
+    safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
+    // safe_xgboost(XGBoosterSetParam(booster, "nthread", "16"));
 
-    safe_xgboost(XGBoosterSetParam(predictor, "eta", "1"));
-
-    // safe_xgboost(XGBoosterSetParam(predictor, "nthread", "16"));
-
-    XGBoosterLoadModel(predictor, "models/standard.model");
+    XGBoosterLoadModel(booster, "models/standard.model");
 
     bst_ulong num_of_features;
-    safe_xgboost(XGBoosterGetNumFeature(predictor, &num_of_features));
+    safe_xgboost(XGBoosterGetNumFeature(booster, &num_of_features));
     // std::cout << num_of_features << "\n";
 
     // calculate features, storing in feature_mat
@@ -128,7 +115,7 @@ void ml_reducer::ml_reduce(graph_access& R, std::vector<NodeID>& reverse_mapping
     // predict
     bst_ulong out_len = 0;
     const float* _prediction = nullptr;
-    safe_xgboost(XGBoosterPredict(predictor, feature_dmat, 0, 0, 0, &out_len, &_prediction));
+    safe_xgboost(XGBoosterPredict(booster, feature_dmat, 0, 0, 0, &out_len, &_prediction));
     ASSERT_EQ(out_len, G.number_of_nodes());
 
     std::vector<float> prediction;
@@ -199,7 +186,7 @@ void ml_reducer::ml_reduce(graph_access& R, std::vector<NodeID>& reverse_mapping
     R.finish_construction();
 }
 
-void ml_reducer::iterative_reduce() {
+NodeWeight ml_reducer::iterative_reduce(graph_access& G) {
     graph_access original_graph;
     // if (mis_config.write_IS) {
         G.copy(original_graph);
@@ -221,7 +208,7 @@ void ml_reducer::iterative_reduce() {
             current_weight += kamis_reducer.get_current_is_weight();
 
         } else { // odd -> ml
-            ml_reduce(R, reverse_mapping);
+            ml_reduce(G, R, reverse_mapping);
             // current_weight += G.getISWeight();
         }
         mappings.push_back(reverse_mapping);   // TODO: think need to save the "true" mapping (from new to old ID's)

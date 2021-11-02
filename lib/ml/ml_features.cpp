@@ -10,6 +10,7 @@
 #include "mis_config.h"
 #include "configuration_mis.h"
 #include "timer.h"
+#include "graph_io.h"
 #include "wmis_interface/weighted_ls.h"
 #include "tools/stat.h"
 
@@ -23,8 +24,12 @@ ml_features::ml_features(MISConfig config)
 ml_features::ml_features(MISConfig config, graph_access &G)
     : feature_matrix(FEATURE_NUM), has_labels {false}, mis_config {std::move(config)}
 {
-    reserveGraph(G);
+    reserveNodes(G.number_of_nodes());
     fillGraph(G);
+}
+
+ml_features::~ml_features() {
+    XGDMatrixFree(dmat);
 }
 
 // getters
@@ -32,12 +37,49 @@ int ml_features::getNumberOfFeatures() {
     return FEATURE_NUM;
 }
 
-// init
-void ml_features::reserveGraph(graph_access& G) {
-    feature_matrix.addRows(G.number_of_nodes());
-    label_data.reserve(label_data.size() + G.number_of_nodes());
+void ml_features::fromPaths(const std::vector<std::string> &graphs, const std::vector<std::string>& labels) {
+    assert((graphs.size() == labels.size()) && "Error: provide same number of graph and label paths\n");
+    for (const auto& path : graphs) {
+        reserveNodes(graph_io::readNumberOfNodes(path));
+    }
+    for (int i = 0; i < graphs.size(); ++i) {
+        graph_access G;
+        graph_io::readGraphWeighted(G, graphs[i]);
+        std::vector<float> label(G.number_of_nodes(), 0);
+        graph_io::readVector(label, labels[i]);
+
+        fillGraph(G, label);
+    }
 }
 
+// init
+void ml_features::reserveNodes(NodeID n) {
+    feature_matrix.addRows(n);
+    label_data.reserve(label_data.size() + n);
+}
+
+void ml_features::fillGraph(graph_access& G) {
+    if (has_labels) {
+        std::cerr << "Error: feature matrix was constructed for labels, so provide the labels for the graph.\n";
+        exit(1);
+    }
+    features(G);
+}
+
+void ml_features::fillGraph(graph_access& G, std::vector<float>& labels) {
+    if (!has_labels) {
+        std::cerr << "Error: feature matrix was constructed not for labels, so the labels will be discarded.\n";
+    }
+    label_data.insert(label_data.end(), labels.begin(), labels.end());
+    features(G);
+}
+
+
+
+template<ml_features::feature f>
+float& ml_features::getFeature(NodeID node) {
+    feature_matrix[node + current_size][f];
+}
 
 void ml_features::features(graph_access& G) {
     timer t;
@@ -48,8 +90,8 @@ void ml_features::features(graph_access& G) {
 
     NodeWeight total_weight = 0;
     forall_nodes(G, node) {
-                total_weight += G.getNodeWeight(node);
-            } endfor
+        total_weight += G.getNodeWeight(node);
+    } endfor
 
     // greedy node coloring
     std::vector<int> node_coloring(G.number_of_nodes());
@@ -105,8 +147,8 @@ void ml_features::features(graph_access& G) {
     t.restart();
     forall_nodes(G, node){
         // num of nodes/ edges, deg
-        getFeature<NODES>(node) = (float) number_of_nodes;
-        getFeature<EDGES>(node) = (float) number_of_edges;
+        getFeature<NODES>(node) = (float) G.number_of_nodes();
+        getFeature<EDGES>(node) = (float) G.number_of_edges();
         getFeature<DEG>(node) = (float) G.getNodeDegree(node);
 
         // lcc
@@ -173,30 +215,23 @@ void ml_features::features(graph_access& G) {
 
         getFeature<CHI2_W_DEG>(node) = (float) chi2(getFeature<W_DEG>(node), avg_wdeg);
     } endfor
+
     std::cout << "done"
               << " (" << t.elapsed() <<  "s)"
               << ".\n";
-}
 
-void ml_features::fillGraph(graph_access& G) {
-    if (has_labels) {
-        std::cerr << "Error: feature matrix was constructed for labels, so provide the labels for the graph.\n";
-        exit(1);
-    }
-    features(G);
     current_size += G.number_of_nodes();
 }
 
-void ml_features::fillGraph(graph_access& G, std::vector<float>& labels) {
-    if (!has_labels) {
-        std::cerr << "Error: feature matrix was constructed not for labels, so the labels will be discarded.\n";
-    }
-    label_data.insert(labels.begin(), labels.end(), label_data.end());
-
-
+void ml_features::initDMatrix() {
+    XGDMatrixCreateFromMat(feature_matrix.c_arr(), feature_matrix.getRows(), feature_matrix.getCols(), 0, &dmat);
+    XGDMatrixSetFloatInfo(dmat, "label", &label_data[0], label_data.size());
 }
 
-template<ml_features::feature f>
-float& ml_features::getFeature(NodeID node) {
-    feature_matrix[node + current_size][f];
+DMatrixHandle ml_features::getDMatrix() {
+    return dmat;
 }
+
+
+
+

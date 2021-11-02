@@ -1,1 +1,1 @@
-../instances/adjnoun.graph
+/home/jholten/brack2-sorted.graph
