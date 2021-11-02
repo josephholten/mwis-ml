@@ -332,7 +332,7 @@ NodeID graph_io::readNumberOfNodes(graph_access &G, const std::string &filename)
     std::ifstream in(filename.c_str());
     if (!in) {
         std::cerr << "Error opening " << filename << std::endl;
-        return 1;
+        exit(1);
     }
 
     long nmbNodes;

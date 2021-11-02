@@ -18,7 +18,9 @@ void features_from_paths(MISConfig& mis_config, const std::vector<std::string>& 
     NodeID current_end = 0;
     for (const auto& path : paths) {
         graph_access G;
-        graph_io::readGraphWeighted(G, path);
+        int err = graph_io::readGraphWeighted(G, path);
+        if (err)
+            exit(1);
         std::cout << "LOG: ml-features: calculating features for " << path << "\n";
         features(mis_config, G, feat_mat.begin() + current_end);
         current_end += G.number_of_nodes() * FEATURE_NUM;

@@ -11,9 +11,6 @@
 #include "tools/io_wrapper.h"
 
 int main(int argn, char** argv) {
-
-    // mis_log::instance()->restart_total_timer();
-
     MISConfig mis_config;
 
     std::string train_graphs_path("../train_graphs_list.txt");
