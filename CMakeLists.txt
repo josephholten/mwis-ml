@@ -7,7 +7,8 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release) 
 endif (NOT CMAKE_BUILD_TYPE)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -DNDEBUG -fPIC -O3 -Wpedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -DNDEBUG -fPIC -fopenmp -O3 -Wpedantic")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -fPIC -fopenmp -Wpedantic")
 
 CHECK_CXX_COMPILER_FLAG(-Wno-unused-value COMPILER_SUPPORTS_NOUNUSED)
 if(COMPILER_SUPPORTS_NOUNUSED)
@@ -88,10 +89,10 @@ add_library(libsources2 OBJECT ${SOURCES})
 
 set(MWIS-ML_SOURCES
         lib/wmis_interface/weighted_ls.cpp
-        lib/ml_features.cpp
+        lib/ml/ml_features_old.cpp
         lib/tools/io_wrapper.cpp
-        lib/ml_reducer.cpp
-        lib/data_structures/ml_features.cpp lib/data_structures/ml_features.h)
+        lib/ml/ml_reducer.cpp
+        lib/ml/ml_features.cpp lib/tools/MLConfig.cpp lib/tools/MLConfig.h)
 
 add_library(libmwis-ml OBJECT ${MWIS-ML_SOURCES})
 

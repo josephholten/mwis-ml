@@ -1,45 +1,28 @@
 //
-// Created by joseph on 10/27/21.
+// Created by joseph on 10/22/21.
 //
 
-#include "ml_features.h"
+#include "ml_features_old.h"
 
-#include <random>
+#include <sstream>
+#include <fstream>
+
+#include <numeric>
+#include <algorithm>
 #include <unordered_set>
+#include <random>
 
 #include "mis_config.h"
 #include "configuration_mis.h"
-#include "timer.h"
+#include "graph_access.h"
 #include "wmis_interface/weighted_ls.h"
 #include "tools/stat.h"
-
-// constructors
-// for training (many graphs with labels)
-ml_features::ml_features(MISConfig config)
-    : feature_matrix(FEATURE_NUM), has_labels {true}, mis_config {std::move(config)}
-{}
-
-// for reducing (single graph without labels)
-ml_features::ml_features(MISConfig config, graph_access &G)
-    : feature_matrix(FEATURE_NUM), has_labels {false}, mis_config {std::move(config)}
-{
-    reserveGraph(G);
-    fillGraph(G);
-}
-
-// getters
-int ml_features::getNumberOfFeatures() {
-    return FEATURE_NUM;
-}
-
-// init
-void ml_features::reserveGraph(graph_access& G) {
-    feature_matrix.addRows(G.number_of_nodes());
-    label_data.reserve(label_data.size() + G.number_of_nodes());
-}
+#include "tools/timer.h"
 
 
-void ml_features::features(graph_access& G) {
+// TODO: extract algorithms
+
+void features(MISConfig& mis_config, graph_access& G, std::vector<float>::iterator feat_mat) {
     timer t;
 
     // precalculation
@@ -48,8 +31,8 @@ void ml_features::features(graph_access& G) {
 
     NodeWeight total_weight = 0;
     forall_nodes(G, node) {
-                total_weight += G.getNodeWeight(node);
-            } endfor
+        total_weight += G.getNodeWeight(node);
+    } endfor
 
     // greedy node coloring
     std::vector<int> node_coloring(G.number_of_nodes());
@@ -104,10 +87,12 @@ void ml_features::features(graph_access& G) {
     std::cout << "LOG: ml-features: starting filling matrix ..." << std::flush;
     t.restart();
     forall_nodes(G, node){
+        const NodeID row_start = node*FEATURE_NUM;
+
         // num of nodes/ edges, deg
-        getFeature<NODES>(node) = (float) number_of_nodes;
-        getFeature<EDGES>(node) = (float) number_of_edges;
-        getFeature<DEG>(node) = (float) G.getNodeDegree(node);
+        feat_mat[row_start + NODES] = (float) number_of_nodes;
+        feat_mat[row_start + EDGES] = (float) number_of_edges;
+        feat_mat[row_start + DEG] = (float) G.getNodeDegree(node);
 
         // lcc
         neighbors.clear();
@@ -122,31 +107,31 @@ void ml_features::features(graph_access& G) {
         }
 
         if (G.getNodeDegree(node) > 1)  // catch divide by zero
-            getFeature<LCC>(node) = ((float) local_edges) / ((float) (G.getNodeDegree(node) * (G.getNodeDegree(node) - 1)));
+            feat_mat[row_start + LCC] = ((float) local_edges) / ((float) (G.getNodeDegree(node) * (G.getNodeDegree(node) - 1)));
         else
-            getFeature<LCC>(node) = 0;
-        avg_lcc += getFeature<LCC>(node);
+            feat_mat[row_start + LCC] = 0;
+        avg_lcc += feat_mat[row_start + LCC];
 
         // local chromatic density
         forall_out_edges(G, edge, node) {
             used_colors[node_coloring[G.getEdgeTarget(edge)]] = true;
         } endfor
-        getFeature<CHROMATIC>(node) = (float) std::accumulate(used_colors.begin(), used_colors.end(), 0) / (float) greedy_chromatic_number;
+                feat_mat[row_start + CHROMATIC] = (float) std::accumulate(used_colors.begin(), used_colors.end(), 0) / (float) greedy_chromatic_number;
 
         // total weight
-        getFeature<T_WEIGHT>(node) = (float) total_weight;
+        feat_mat[row_start + T_WEIGHT] = (float) total_weight;
 
         // node weight
-        getFeature<NODE_W>(node) = (float) G.getNodeWeight(node);
+        feat_mat[row_start + NODE_W] = (float) G.getNodeWeight(node);
 
         // node weighted degree
         forall_out_edges(G, edge, node) {
-            getFeature<W_DEG>(node) += (float) G.getNodeWeight(G.getEdgeTarget(edge));
+            feat_mat[row_start + W_DEG] += (float) G.getNodeWeight(G.getEdgeTarget(edge));
         } endfor
-        avg_wdeg = getFeature<W_DEG>(node);
+        avg_wdeg += feat_mat[row_start + W_DEG];
 
         // local search
-        getFeature<LOCAL_SEARCH>(node) += (float) ls_signal[node] / ls_rounds;
+        feat_mat[row_start + LOCAL_SEARCH] += (float) ls_signal[node] / ls_rounds;
 
     } endfor
 
@@ -157,46 +142,24 @@ void ml_features::features(graph_access& G) {
     float avg_deg = (2 * (float) G.number_of_edges()) / ((float) G.number_of_nodes());
 
     forall_nodes(G,node) {
-        getFeature<CHI2_DEG>(node) = (float) chi2(G.getNodeDegree(node), avg_deg);
+        const NodeID row_start = node*FEATURE_NUM;
+        feat_mat[row_start + CHI2_DEG] = (float) chi2(G.getNodeDegree(node), avg_deg);
 
         float avg_chi2_deg = 0;
         forall_out_edges(G, edge, node) {
-            avg_chi2_deg += getFeature<AVG_CHI2_DEG>(node);
+            avg_chi2_deg += feat_mat[G.getEdgeTarget(edge) * FEATURE_NUM + AVG_CHI2_DEG];
         } endfor
 
         if(G.getNodeDegree(node) > 0)    // catch divide by zero
-            getFeature<AVG_CHI2_DEG>(node) = avg_chi2_deg / (float) G.getNodeDegree(node);
+            feat_mat[row_start + AVG_CHI2_DEG] = avg_chi2_deg / (float) G.getNodeDegree(node);
         else
-            getFeature<AVG_CHI2_DEG>(node) = 0;
+            feat_mat[row_start + AVG_CHI2_DEG] = 0;
 
-        getFeature<CHI2_LCC>(node) = (float) chi2(getFeature<LCC>(node), avg_lcc);
+        feat_mat[row_start + CHI2_LCC] = (float) chi2(feat_mat[row_start + LCC], avg_lcc);
 
-        getFeature<CHI2_W_DEG>(node) = (float) chi2(getFeature<W_DEG>(node), avg_wdeg);
+        feat_mat[row_start + CHI2_W_DEG] = (float) chi2(feat_mat[row_start + W_DEG], avg_wdeg);
     } endfor
     std::cout << "done"
               << " (" << t.elapsed() <<  "s)"
               << ".\n";
-}
-
-void ml_features::fillGraph(graph_access& G) {
-    if (has_labels) {
-        std::cerr << "Error: feature matrix was constructed for labels, so provide the labels for the graph.\n";
-        exit(1);
-    }
-    features(G);
-    current_size += G.number_of_nodes();
-}
-
-void ml_features::fillGraph(graph_access& G, std::vector<float>& labels) {
-    if (!has_labels) {
-        std::cerr << "Error: feature matrix was constructed not for labels, so the labels will be discarded.\n";
-    }
-    label_data.insert(labels.begin(), labels.end(), label_data.end());
-
-
-}
-
-template<ml_features::feature f>
-float& ml_features::getFeature(NodeID node) {
-    feature_matrix[node + current_size][f];
 }

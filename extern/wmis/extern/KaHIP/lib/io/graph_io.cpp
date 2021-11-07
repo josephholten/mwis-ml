@@ -325,7 +325,7 @@ int graph_io::readGraphWeighted(graph_access & G, const std::string & filename, 
         return 0;
 }
 
-NodeID graph_io::readNumberOfNodes(graph_access &G, const std::string &filename) {
+NodeID graph_io::readNumberOfNodes(const std::string &filename) {
     std::string line;
 
     // open file for reading

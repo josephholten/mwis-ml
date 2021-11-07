@@ -2,15 +2,17 @@
 // Created by joseph on 10/14/21.
 //
 #include <fstream>
-#include "safe_c_api.h"
+#include "tools/safe_c_api.h"
 
 #include "mis_config.h"
 #include "graph_access.h"
 
-#include "ml_features.h"
+#include "ml/ml_features_old.h"
+#include "ml/ml_reducer.h"
 #include "tools/io_wrapper.h"
 
 int main(int argn, char** argv) {
+    /*
     MISConfig mis_config;
 
     std::string train_graphs_path("../train_graphs_list.txt");
@@ -91,5 +93,13 @@ int main(int argn, char** argv) {
     safe_xgboost(XGBoosterFree(booster));
     safe_xgboost(XGDMatrixFree(dtrain));
     safe_xgboost(XGDMatrixFree(dtest));
+     */
 
+    MISConfig mis_config;
+
+    // parse parameters
+
+    ml_reducer reducer(mis_config, 0.95);
+    reducer.train_model();
+    reducer.save_model();
 }
