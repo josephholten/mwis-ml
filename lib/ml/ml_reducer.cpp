@@ -37,7 +37,7 @@ void ml_reducer::train_model() {
 
     train_features.fromPaths(split_file_by_lines(train_graphs_path),
                              split_file_by_lines(train_labels_path));
-    train_features.fromPaths(split_file_by_lines(test_graph_path),
+    test_features.fromPaths(split_file_by_lines(test_graph_path),
                              split_file_by_lines(test_label_path));
 
     // initialize DMatrices in with feature and label data
@@ -74,7 +74,7 @@ void ml_reducer::train_model() {
 
     bst_ulong num_feature = 0;
     safe_xgboost(XGBoosterGetNumFeature(booster, &num_feature));
-    printf("num_feature: %lu\n", (unsigned long) (num_feature));
+    assert((unsigned long) num_feature == (unsigned long) train_features.getNumberOfFeatures());
 
     // if (mis_config.predict_test) {
 
@@ -234,4 +234,6 @@ NodeWeight ml_reducer::iterative_reduce(graph_access& G) {
 
     // if write:
     //     graph_io::writeVector(current_IS)
+
+    return 0;
 }

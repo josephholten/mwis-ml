@@ -48,7 +48,7 @@ public:
 
     void reserveNodes(NodeID n);   // for reserving memory
     void fillGraph(graph_access& G);
-    void fillGraph(graph_access& G, std::vector<float>& labels);
+    void fillGraph(graph_access& G, std::vector<float>& labels, NodeID offset);
 
     void initDMatrix();
     DMatrixHandle getDMatrix();

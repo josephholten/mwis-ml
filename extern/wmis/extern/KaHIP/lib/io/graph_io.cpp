@@ -374,4 +374,3 @@ void graph_io::writeIndependentSet(graph_access & G, std::string filename) {
 
         f.close();
 }
-

@@ -6,6 +6,7 @@
 
 #include <random>
 #include <unordered_set>
+#include <omp.h>
 
 #include "mis_config.h"
 #include "configuration_mis.h"
@@ -37,25 +38,35 @@ int ml_features::getNumberOfFeatures() {
     return FEATURE_NUM;
 }
 
-void ml_features::fromPaths(const std::vector<std::string> &graphs, const std::vector<std::string>& labels) {
-    assert((graphs.size() == labels.size()) && "Error: provide same number of graph and label paths\n");
-    for (const auto& path : graphs) {
-        reserveNodes(graph_io::readNumberOfNodes(path));
-    }
-    for (int i = 0; i < graphs.size(); ++i) {
-        graph_access G;
-        graph_io::readGraphWeighted(G, graphs[i]);
-        std::vector<float> label(G.number_of_nodes(), 0);
-        graph_io::readVector(label, labels[i]);
+void ml_features::fromPaths(const std::vector<std::string> &graph_paths, const std::vector<std::string>& label_paths) {
+    assert((graph_paths.size() == label_paths.size()) && "Error: provide same number of graph and label paths\n");
 
-        fillGraph(G, label);
+    // calculate the node offsets of each graph
+    // produces a mapping of index in the list of paths (provided by the user) and the start position in the feature_matrix and label_data
+    std::vector<NodeID> offsets(graph_paths.size()+1,0);
+    for (int i = 0; i < graph_paths.size(); i++) {
+        offsets[i+1] = offsets[i] + graph_io::readNumberOfNodes(graph_paths[i]);
+    }
+
+    // last offset is total number of nodes
+    reserveNodes(offsets[graph_paths.size()]);
+
+    // #pragma omp parallel for default(none) shared(graph_paths, label_paths, offsets, std::cout)
+    for (int i = 0; i < graph_paths.size(); ++i) {
+        std::cout << "Thread " << omp_get_thread_num() << std::endl;
+        graph_access G;
+        graph_io::readGraphWeighted(G, graph_paths[i]);
+        std::vector<float> labels(G.number_of_nodes(), 0);
+        graph_io::readVector<float>(labels.begin(), offsets[i+1]-offsets[i], label_paths[i]);
+
+        fillGraph(G, labels, offsets[i]);
     }
 }
 
 // init
 void ml_features::reserveNodes(NodeID n) {
     feature_matrix.addRows(n);
-    label_data.reserve(label_data.size() + n);
+    label_data.resize(label_data.size() + n);
 }
 
 void ml_features::fillGraph(graph_access& G) {
@@ -66,19 +77,19 @@ void ml_features::fillGraph(graph_access& G) {
     features(G);
 }
 
-void ml_features::fillGraph(graph_access& G, std::vector<float>& labels) {
+void ml_features::fillGraph(graph_access& G, std::vector<float>& labels, NodeID offset) {
     if (!has_labels) {
         std::cerr << "Error: feature matrix was constructed not for labels, so the labels will be discarded.\n";
     }
-    label_data.insert(label_data.end(), labels.begin(), labels.end());
     features(G);
+    std::copy(labels.begin(), labels.end(), label_data.begin() + offset);
 }
 
 
 
 template<ml_features::feature f>
 float& ml_features::getFeature(NodeID node) {
-    feature_matrix[node + current_size][f];
+    return feature_matrix[node + current_size][f];
 }
 
 void ml_features::features(graph_access& G) {
@@ -96,7 +107,7 @@ void ml_features::features(graph_access& G) {
     // greedy node coloring
     std::vector<int> node_coloring(G.number_of_nodes());
     std::vector<bool> available(G.number_of_nodes(), true);
-    std::cout << "LOG: ml-features: starting greedy node coloring  ..." << std::flush;
+    std::cout << "LOG: ml-features: starting greedy node coloring  ... " << std::flush;
 
     forall_nodes(G, node) {
         std::fill(available.begin(), available.end(), true);
@@ -107,7 +118,7 @@ void ml_features::features(graph_access& G) {
     } endfor
     int greedy_chromatic_number = *std::max_element(node_coloring.begin(), node_coloring.end()) + 1;
     std::vector<bool> used_colors(greedy_chromatic_number);
-    std::cout << " done.\n";
+    std::cout << "done.\n";
 
     // local search
     std::vector<int> ls_signal(G.number_of_nodes(), 0);
@@ -136,7 +147,7 @@ void ml_features::features(graph_access& G) {
                   << ".\n";
     }
 
-    // loop variables
+    // loop variales
     EdgeID local_edges = 0;
     std::unordered_set<NodeID> neighbors {};      // don't know how to do faster? maybe using bitset from boost?
     neighbors.reserve(G.getMaxDegree()+1);

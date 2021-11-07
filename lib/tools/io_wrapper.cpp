@@ -7,6 +7,7 @@
 #include "graph_io.h"
 #include "ml/ml_features_old.h"
 
+/*
 void features_from_paths(MISConfig& mis_config, const std::vector<std::string>& paths, std::vector<float>& feat_mat) {
     NodeID total_nodes = 0;
     for (const auto& path : paths) {
@@ -25,6 +26,7 @@ void features_from_paths(MISConfig& mis_config, const std::vector<std::string>& 
         current_end += G.number_of_nodes() * FEATURE_NUM;
     }
 }
+ */
 
 // void labels_from_paths(const std::vector<std::string>& paths, typename std::vector<float>::iterator label_vec) {
 //     // assume user sizes label_vec accordingly
