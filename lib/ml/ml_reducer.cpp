@@ -4,7 +4,6 @@
 
 #include <numeric>
 #include "ml_reducer.h"
-#include "ml_features_old.h"
 
 #include "tools/safe_c_api.h"
 
@@ -13,7 +12,6 @@
 #include "mis_config.h"
 #include "graph_access.h"
 
-#include "ml_features_old.h"
 #include "tools/io_wrapper.h"
 #include "ml_features.h"
 
@@ -94,28 +92,26 @@ void ml_reducer::save_model() {
     safe_xgboost(XGBoosterSaveModel(booster, time_stamp_name));
 }
 
-void ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping) { // R is the ml reduced graph
+// R is the ml reduced graph
+// reverse_mapping is the mapping from old ids to new ids (rev[old] = new)
+void ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping) {
     safe_xgboost(XGBoosterCreate(nullptr, 0, &booster));
     safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
-    // safe_xgboost(XGBoosterSetParam(booster, "nthread", "16"));
+    safe_xgboost(XGBoosterSetParam(booster, "nthread", "16"));
 
-    XGBoosterLoadModel(booster, "models/standard.model");
+    safe_xgboost(XGBoosterLoadModel(booster, "/home/joseph/uni/sem5/christian/mwis-ml/models/latest.model"));
 
     bst_ulong num_of_features;
     safe_xgboost(XGBoosterGetNumFeature(booster, &num_of_features));
-    // std::cout << num_of_features << "\n";
+    assert(num_of_features == FEATURE_NUM);
 
-    // calculate features, storing in feature_mat
-    DMatrixHandle feature_dmat;
-
-    std::vector<float> feat_mat((size_t) G.number_of_nodes() * FEATURE_NUM, 0);
-    features(mis_config, G, feat_mat.begin());
-    safe_xgboost(XGDMatrixCreateFromMat(&feat_mat[0], (bst_ulong) G.number_of_nodes(), (bst_ulong) FEATURE_NUM, 0, &feature_dmat));
+    ml_features feature_mat = ml_features(mis_config, G);
+    feature_mat.initDMatrix();
 
     // predict
     bst_ulong out_len = 0;
     const float* _prediction = nullptr;
-    safe_xgboost(XGBoosterPredict(booster, feature_dmat, 0, 0, 0, &out_len, &_prediction));
+    safe_xgboost(XGBoosterPredict(booster, feature_mat.getDMatrix(), 0, 0, 0, &out_len, &_prediction));
     ASSERT_EQ(out_len, G.number_of_nodes());
 
     std::vector<float> prediction;
@@ -169,8 +165,7 @@ void ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>
     // make reverse mapping from original graph to R
     reverse_mapping.resize(G.number_of_nodes(), -1);   // if node does not exist anymore, it is mapped to -1
     for (int new_id = 0; new_id < R_nodes.size(); ++new_id) {
-        NodeID node = R_nodes[new_id];
-        reverse_mapping[node] = new_id;
+        reverse_mapping[R_nodes[new_id]] = new_id;
     }
 
     // construct R
@@ -180,8 +175,10 @@ void ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>
         R.setNodeWeight(new_node, G.getNodeWeight(node));
 
         forall_out_edges(G, edge, node) {
-                    R.new_edge(new_node, reverse_mapping[G.getEdgeTarget(edge)]);
-                } endfor
+            auto new_target = reverse_mapping[G.getEdgeTarget(edge)];
+            if (new_target != -1)
+                R.new_edge(new_node, reverse_mapping[G.getEdgeTarget(edge)]);
+        } endfor
     }
     R.finish_construction();
 }
