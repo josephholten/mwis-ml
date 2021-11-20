@@ -3,12 +3,12 @@ cmake_minimum_required(VERSION 3.10.0)
 include(CheckCXXCompilerFlag)
 project(mwis-ml C CXX)
 
-#if (NOT CMAKE_BUILD_TYPE)
-#    set(CMAKE_BUILD_TYPE Release)
-#endif (NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif (NOT CMAKE_BUILD_TYPE)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -DNDEBUG -fPIC -fopenmp -O3 -Wpedantic")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -fPIC -fopenmp -Wpedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -fPIC -fopenmp -Wpedantic")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG")
 
 CHECK_CXX_COMPILER_FLAG(-Wno-unused-value COMPILER_SUPPORTS_NOUNUSED)
 if(COMPILER_SUPPORTS_NOUNUSED)
@@ -89,10 +89,11 @@ add_library(libsources2 OBJECT ${SOURCES})
 
 set(MWIS-ML_SOURCES
         lib/wmis_interface/weighted_ls.cpp
-        lib/ml/ml_features_old.cpp
+        #lib/wmis_interface/branch_reduce.cpp
         lib/tools/io_wrapper.cpp
         lib/ml/ml_reducer.cpp
-        lib/ml/ml_features.cpp lib/tools/MLConfig.cpp lib/tools/MLConfig.h)
+        lib/ml/ml_features.cpp
+        lib/tools/MLConfig.cpp lib/tools/MLConfig.h)
 
 add_library(libmwis-ml OBJECT ${MWIS-ML_SOURCES})
 
@@ -103,5 +104,3 @@ target_link_libraries(ml-reduce xgboost)
 
 add_executable(ml-train "app/ml-train.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
 target_link_libraries(ml-train xgboost)
-
-add_executable(test "app/test.cpp")

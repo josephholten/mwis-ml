@@ -5,7 +5,6 @@
 #include "mis_config.h"
 #include "graph_access.h"
 #include "graph_io.h"
-#include "ml/ml_features_old.h"
 
 /*
 void features_from_paths(MISConfig& mis_config, const std::vector<std::string>& paths, std::vector<float>& feat_mat) {

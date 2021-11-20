@@ -20,12 +20,13 @@ private:
     BoosterHandle booster;
 
 public:
-    explicit ml_reducer(MISConfig mis_config, float q);
+    explicit ml_reducer(MISConfig mis_config, float q, const std::string& model_filepath = "/home/joseph/uni/sem5/christian/mwis-ml/models/latest.model");
     ~ml_reducer() noexcept(false);
 
     void train_model();
-    void ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping);
-    NodeWeight iterative_reduce(graph_access& G);
+    void ml_reduce_old(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping);
+    NodeWeight ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping);
+    NodeWeight iterative_reduce(graph_access& original_graph);
 
     void save_model();
 };
