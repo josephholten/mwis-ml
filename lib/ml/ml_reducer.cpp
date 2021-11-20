@@ -8,6 +8,8 @@
 #include "tools/safe_c_api.h"
 
 #include <fstream>
+#include <wmis_interface/weighted_ls.h>
+#include <graph_io.h>
 
 #include "mis_config.h"
 #include "graph_access.h"
@@ -15,8 +17,17 @@
 #include "tools/io_wrapper.h"
 #include "ml_features.h"
 
-ml_reducer::ml_reducer(MISConfig _mis_config, const float _q) : mis_config {std::move(_mis_config)}, q {_q} {
+ml_reducer::ml_reducer(MISConfig _mis_config, const float _q, const std::string& model_filepath) : mis_config {std::move(_mis_config)}, q {_q} {
+    // init booster
+    safe_xgboost(XGBoosterCreate(nullptr, 0, &booster));
+    safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
+    safe_xgboost(XGBoosterSetParam(booster, "nthread", "16"));
 
+    safe_xgboost(XGBoosterLoadModel(booster, model_filepath.c_str()));
+
+    bst_ulong num_of_features;
+    safe_xgboost(XGBoosterGetNumFeature(booster, &num_of_features));
+    assert(num_of_features == ml_features::FEATURE_NUM);
 }
 
 ml_reducer::~ml_reducer() noexcept(false) {
@@ -94,17 +105,7 @@ void ml_reducer::save_model() {
 
 // R is the ml reduced graph
 // reverse_mapping is the mapping from old ids to new ids (rev[old] = new)
-void ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping) {
-    safe_xgboost(XGBoosterCreate(nullptr, 0, &booster));
-    safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
-    safe_xgboost(XGBoosterSetParam(booster, "nthread", "16"));
-
-    safe_xgboost(XGBoosterLoadModel(booster, "/home/joseph/uni/sem5/christian/mwis-ml/models/latest.model"));
-
-    bst_ulong num_of_features;
-    safe_xgboost(XGBoosterGetNumFeature(booster, &num_of_features));
-    assert(num_of_features == FEATURE_NUM);
-
+void ml_reducer::ml_reduce_old(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping) {
     ml_features feature_mat = ml_features(mis_config, G);
     feature_mat.initDMatrix();
 
@@ -183,35 +184,119 @@ void ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>
     R.finish_construction();
 }
 
-NodeWeight ml_reducer::iterative_reduce(graph_access& G) {
-    graph_access original_graph;
-    // if (mis_config.write_IS) {
-        G.copy(original_graph);
-    // }
+NodeWeight ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping) {
+    ml_features feature_mat = ml_features(mis_config, G);
+    feature_mat.initDMatrix();
+
+    // predict
+    bst_ulong out_len = 0;
+    const float* _prediction = nullptr;
+    safe_xgboost(XGBoosterPredict(booster, feature_mat.getDMatrix(), 0, 0, 0, &out_len, &_prediction));
+    ASSERT_EQ(out_len, G.number_of_nodes());
+
+    std::vector<float> prediction;
+    prediction.assign(_prediction, _prediction+out_len);
+
+    // sort nodes by their prediction
+    std::vector<NodeID> high_candidates = std::vector<NodeID>(G.number_of_nodes(), 0);
+    std::iota(high_candidates.begin(), high_candidates.end(), 0);
+    std::sort(high_candidates.begin(), high_candidates.end(),
+              [&prediction](const NodeID& n1, const NodeID& n2){ return prediction[n1] < prediction[n2]; }
+    );
+
+    std::vector<bool> exists(G.number_of_nodes(), true);
+    NodeWeight is_weight = 0;
+
+    // isolate high nodes, remove low nodes
+    for(auto node : high_candidates) {
+        if (exists[node]) {
+            if (prediction[node] >= q) {
+                G.setPartitionIndex(node, 1);
+                is_weight += G.getNodeWeight(node);
+                exists[node] = false;
+                forall_out_edges(G, edge, node) {
+                    NodeID neighbor = G.getEdgeTarget(node);
+                    exists[neighbor] = false;
+                } endfor
+            }
+            if (prediction[node] < 1-q) {
+                exists[node] = false;
+            }
+        }
+    }
+
+
+    // calculate number of edges and create set of nodes for R
+    EdgeID R_m = 0;
+    std::vector<NodeID> R_nodes; // is mapping from R_ids to original ids
+    R_nodes.reserve(G.number_of_nodes());
+    forall_nodes(G, node) {
+        if (exists[node]) {
+            forall_out_edges(G, edge, node) {
+                if (exists[node])
+                    ++R_m;
+            } endfor
+            R_nodes.push_back(node);
+        }
+    } endfor
+
+    // make reverse mapping from original graph to R
+    reverse_mapping.resize(G.number_of_nodes(), -1);   // if node does not exist anymore, it is mapped to -1
+    for (int new_id = 0; new_id < R_nodes.size(); ++new_id) {
+        reverse_mapping[R_nodes[new_id]] = new_id;
+    }
+
+    // construct R
+    R.start_construction(R_nodes.size(), R_m);
+    for (auto node : R_nodes) {
+        NodeID new_node = R.new_node();
+        R.setNodeWeight(new_node, G.getNodeWeight(node));
+
+        forall_out_edges(G, edge, node) {
+            auto new_target = reverse_mapping[G.getEdgeTarget(edge)];
+            if (new_target != -1)
+                R.new_edge(new_node, reverse_mapping[G.getEdgeTarget(edge)]);
+        } endfor
+    }
+    R.finish_construction();
+
+    return is_weight;
+}
+
+NodeWeight ml_reducer::iterative_reduce(graph_access& orignal_graph) {
+    graph_access* G = &orignal_graph;
+    graph_access R;
 
     NodeWeight current_weight = 0;
     std::vector<std::vector<NodeID>> mappings;
     std::vector<std::vector<NodeID>> independent_sets;
 
-    int iteration = 0;
-    while (G.number_of_nodes() > 0) {
-        graph_access R; // currently reduced graph
-        std::vector<NodeID> reverse_mapping(G.number_of_nodes(), 0);
+    // map force_IS through all reverse mappings, by iterating through the mappings in reverse and mapping the node_ids
+    // save force_IS in the original graph
+    // check if IS in original graph is still independent
+    for (int iteration = 0; G->number_of_nodes() > 0; ++iteration) {
+        std::vector<NodeID> reverse_mapping(G->number_of_nodes(), -1);
+
         if (iteration % 2 == 0) { // even -> kamis
-            branch_and_reduce_algorithm kamis_reducer(G, mis_config);
+            branch_and_reduce_algorithm kamis_reducer(*G, mis_config);
             kamis_reducer.reduce_graph();
             kamis_reducer.build_graph_access(R, reverse_mapping);
-
             current_weight += kamis_reducer.get_current_is_weight();
 
         } else { // odd -> ml
-            ml_reduce(G, R, reverse_mapping);
-            // current_weight += G.getISWeight();
+            current_weight += ml_reduce(*G, R, reverse_mapping);
         }
-        mappings.push_back(reverse_mapping);   // TODO: think need to save the "true" mapping (from new to old ID's)
         // save IS nodes into vector, push onto stack
+        mappings.push_back(reverse_mapping);
 
-        R.copy(G); // copy R into G?
+        std::vector<NodeID> force_IS;
+        for (NodeID node = 0; node < G->number_of_nodes(); ++node) {
+            if (G->getPartitionIndex(node) == 1)  // node is in IS
+                force_IS.push_back(node);
+        }
+        independent_sets.push_back(force_IS);
+
+        G = &R;
     }
 
     std::vector<NodeID> current_IS;
@@ -229,8 +314,7 @@ NodeWeight ml_reducer::iterative_reduce(graph_access& G) {
         current_IS = translated;
     }
 
-    // if write:
-    //     graph_io::writeVector(current_IS)
+    is_IS(*G);
 
     return 0;
 }

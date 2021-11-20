@@ -6,7 +6,7 @@
 #define KAMIS_WEIGHTED_LS_H
 
 // void initial_is(graph_access& G);
-// bool is_IS(graph_access& G);
+bool is_IS(graph_access& G);
 // void perform_ils(const MISConfig& mis_config, graph_access& G, NodeWeight weight_offset);
 // NodeWeight extractReductionOffset(const std::string & comments);
 
