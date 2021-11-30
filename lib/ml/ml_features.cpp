@@ -51,7 +51,7 @@ void ml_features::fromPaths(const std::vector<std::string> &graph_paths, const s
     // last offset is total number of nodes
     reserveNodes(offsets[graph_paths.size()]);
 
-    #pragma omp parallel for default(none) shared(graph_paths, label_paths, offsets, std::cout)
+    // #pragma omp parallel for default(none) shared(graph_paths, label_paths, offsets, std::cout)
     for (int i = 0; i < graph_paths.size(); ++i) {
         // std::cout << "Thread " << omp_get_thread_num() << std::endl;
         graph_access G;
