@@ -30,10 +30,7 @@ int main(int argn, char** argv) {
     ml_reducer reducer = ml_reducer(mis_config, q);
     graph_access R;
     std::vector<NodeID> reverse_mapping;
-    //reducer.ml_reduce_old(G, R, reverse_mapping);
-    auto weight = reducer.iterative_reduce(G);
-    std::cout << "Found independent set of weight: " << weight << std::endl;
+    reducer.ml_reduce(G, R, reverse_mapping);
 
-    graph_io::writeIndependentSet(G, "/home/joseph/sem5/christian/mwis-ml/independent_set.mis");
-    //graph_io::writeGraphWeighted(R, mis_config.output_filename);
+    graph_io::writeGraphWeighted(R, mis_config.output_filename);
 }

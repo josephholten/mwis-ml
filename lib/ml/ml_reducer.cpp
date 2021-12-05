@@ -225,7 +225,6 @@ NodeWeight ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<N
         }
     }
 
-
     // calculate number of edges and create set of nodes for R
     EdgeID R_m = 0;
     std::vector<NodeID> R_nodes; // is mapping from R_ids to original ids
@@ -282,7 +281,6 @@ NodeWeight ml_reducer::iterative_reduce(graph_access& orignal_graph) {
             kamis_reducer.reduce_graph();
             kamis_reducer.build_graph_access(R, reverse_mapping);
             current_weight += kamis_reducer.get_current_is_weight();
-
         } else { // odd -> ml
             current_weight += ml_reduce(*G, R, reverse_mapping);
         }

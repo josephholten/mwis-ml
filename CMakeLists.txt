@@ -7,7 +7,7 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif (NOT CMAKE_BUILD_TYPE)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -fPIC -fopenmp -Wpedantic")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fno-omit-frame-pointer -march=native -fPIC -fopenmp -Wpedantic")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG")
 
 CHECK_CXX_COMPILER_FLAG(-Wno-unused-value COMPILER_SUPPORTS_NOUNUSED)
@@ -101,6 +101,9 @@ add_subdirectory(extern/xgboost)
 
 add_executable(ml-reduce "app/ml-reduce.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
 target_link_libraries(ml-reduce xgboost)
+
+add_executable(ml-reduce-simple "app/ml-reduce-simple.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
+target_link_libraries(ml-reduce-simple xgboost)
 
 add_executable(ml-train "app/ml-train.cpp" $<TARGET_OBJECTS:libsources2> $<TARGET_OBJECTS:libmwis-ml>)
 target_link_libraries(ml-train xgboost)
