@@ -20,7 +20,7 @@ private:
     BoosterHandle booster;
 
 public:
-    explicit ml_reducer(MISConfig mis_config, float q, const std::string& model_filepath = "/home/joseph/uni/sem5/christian/mwis-ml/models/latest.model");
+    explicit ml_reducer(MISConfig mis_config, float q, const std::string& model_filepath = "../models/latest.model");
     ~ml_reducer() noexcept(false);
 
     void train_model();

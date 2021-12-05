@@ -17,7 +17,7 @@
 #include "tools/io_wrapper.h"
 #include "ml_features.h"
 
-ml_reducer::ml_reducer(MISConfig _mis_config, const float _q, const std::string& model_filepath) : mis_config {std::move(_mis_config)}, q {_q} {
+ml_reducer::ml_reducer(MISConfig _mis_config, const float _q, const std::string& model_filepath /* = "../models/latest.model" */) : mis_config {std::move(_mis_config)}, q {_q} {
     // init booster
     safe_xgboost(XGBoosterCreate(nullptr, 0, &booster));
     safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
