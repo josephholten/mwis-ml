@@ -263,7 +263,7 @@ NodeWeight ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<N
 }
 
 NodeWeight ml_reducer::iterative_reduce(graph_access& orignal_graph) {
-    graph_access* G = &orignal_graph;
+    graph_access G = orignal_graph;
     graph_access R;
 
     NodeWeight current_weight = 0;
@@ -273,28 +273,28 @@ NodeWeight ml_reducer::iterative_reduce(graph_access& orignal_graph) {
     // map force_IS through all reverse mappings, by iterating through the mappings in reverse and mapping the node_ids
     // save force_IS in the original graph
     // check if IS in original graph is still independent
-    for (int iteration = 0; G->number_of_nodes() > 0; ++iteration) {
-        std::vector<NodeID> reverse_mapping(G->number_of_nodes(), -1);
+    for (int iteration = 0; G.number_of_nodes() > 0; ++iteration) {
+        std::vector<NodeID> reverse_mapping(G.number_of_nodes(), -1);
 
         if (iteration % 2 == 0) { // even -> kamis
-            branch_and_reduce_algorithm kamis_reducer(*G, mis_config);
+            branch_and_reduce_algorithm kamis_reducer(G, mis_config);
             kamis_reducer.reduce_graph();
             kamis_reducer.build_graph_access(R, reverse_mapping);
             current_weight += kamis_reducer.get_current_is_weight();
         } else { // odd -> ml
-            current_weight += ml_reduce(*G, R, reverse_mapping);
+            current_weight += ml_reduce(G, R, reverse_mapping);
         }
         // save IS nodes into vector, push onto stack
         mappings.push_back(reverse_mapping);
 
         std::vector<NodeID> force_IS;
-        for (NodeID node = 0; node < G->number_of_nodes(); ++node) {
-            if (G->getPartitionIndex(node) == 1)  // node is in IS
+        for (NodeID node = 0; node < G.number_of_nodes(); ++node) {
+            if (G.getPartitionIndex(node) == 1)  // node is in IS
                 force_IS.push_back(node);
         }
         independent_sets.push_back(force_IS);
 
-        G = &R;
+        G = R;
     }
 
     std::vector<NodeID> current_IS;

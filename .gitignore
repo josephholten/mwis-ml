@@ -41,8 +41,3 @@ build/
 
 # Instances
 /instances
-
-test_graphs_list.txt
-test_labels_list.txt
-train_graphs_list.txt
-train_labels_list.txt
