@@ -1,3 +1,6 @@
 [submodule "extern/xgboost"]
 	path = extern/xgboost
 	url = https://github.com/dmlc/xgboost
+[submodule "extern/kamis"]
+	path = extern/kamis
+	url = https://github.com/KarlsruheMIS/KaMIS.git
