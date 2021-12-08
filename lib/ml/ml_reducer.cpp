@@ -214,6 +214,7 @@ NodeWeight ml_reducer::ml_reduce(graph_access& G, graph_access& R, std::vector<N
                 G.setPartitionIndex(node, 1);
                 is_weight += G.getNodeWeight(node);
                 exists[node] = false;
+                std::cout << "saving node " << node << std::endl;
                 forall_out_edges(G, edge, node) {
                     NodeID neighbor = G.getEdgeTarget(node);
                     exists[neighbor] = false;

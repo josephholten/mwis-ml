@@ -19,7 +19,7 @@ int main(int argn, char** argv) {
         return 0;
     }
 
-    float q = 0.95;  // TODO: commandline parameter
+    float q = 0.80;  // TODO: commandline parameter
 
     mis_config.graph_filename = graph_filepath.substr(graph_filepath.find_last_of('/') + 1);
 
@@ -30,7 +30,12 @@ int main(int argn, char** argv) {
     ml_reducer reducer = ml_reducer(mis_config, q);
     graph_access R;
     std::vector<NodeID> reverse_mapping;
-    reducer.ml_reduce(G, R, reverse_mapping);
+    auto weight = reducer.ml_reduce(G, R, reverse_mapping);
+    std::cout << "mis weight " << weight << std::endl;
 
     graph_io::writeGraphWeighted(R, mis_config.output_filename);
+
+    // stats
+    std::cout << "remaining nodes: " << (float) R.number_of_nodes() / G.number_of_nodes() << std::endl;
+
 }
