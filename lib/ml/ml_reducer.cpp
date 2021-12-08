@@ -312,7 +312,7 @@ NodeWeight ml_reducer::iterative_reduce(graph_access& orignal_graph) {
         current_IS = translated;
     }
 
-    is_IS(*G);
+    is_IS(G);
 
     return 0;
 }

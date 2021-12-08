@@ -38,8 +38,18 @@ int ml_features::getNumberOfFeatures() {
     return FEATURE_NUM;
 }
 
-void ml_features::fromPaths(const std::vector<std::string> &graph_paths, const std::vector<std::string>& label_paths) {
+void ml_features::fromPaths(const std::vector<std::string> &all_graph_paths, const std::vector<std::string>& all_label_paths) {
     assert((graph_paths.size() == label_paths.size()) && "Error: provide same number of graph and label paths\n");
+
+    std::vector<std::string> graph_paths;
+    std::vector<std::string> label_paths;
+    for (int i = 0; i < all_graph_paths.size(); ++i) {
+        if (graph_io::readNumberOfNodes(all_graph_paths[i]) > 0) {
+            graph_paths.push_back(all_graph_paths[i]);
+            label_paths.push_back(all_label_paths[i]);
+        }
+    }
+    std::cout << "LOG: ml-features: of " << all_graph_paths.size() << " " << graph_paths.size() << " were non empty\n";
 
     // calculate the node offsets of each graph
     // produces a mapping of index in the list of paths (provided by the user) and the start position in the feature_matrix and label_data
@@ -54,6 +64,7 @@ void ml_features::fromPaths(const std::vector<std::string> &graph_paths, const s
     // #pragma omp parallel for default(none) shared(graph_paths, label_paths, offsets, std::cout)
     for (int i = 0; i < graph_paths.size(); ++i) {
         // std::cout << "Thread " << omp_get_thread_num() << std::endl;
+        std::cout << "LOG: ml-features: graph " << graph_paths[i] << " (" << (float) i / graph_paths.size() * 100 << "%)\n";
         graph_access G;
         graph_io::readGraphWeighted(G, graph_paths[i]);
         std::vector<float> labels(G.number_of_nodes(), 0);
