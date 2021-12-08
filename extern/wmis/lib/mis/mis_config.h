@@ -50,6 +50,8 @@ struct MISConfig {
     Weight_Source weight_source;
     // Choose reduction order and amount for given graph type
     Reduction_Style reduction_style;
+    // ml reduction confidence
+    float q;
 
     void setReductionStyle(const std::string & redu_style) {
         if (strCompare(redu_style, "normal") || strCompare(redu_style, "sparse")) {

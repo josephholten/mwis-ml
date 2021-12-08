@@ -13,22 +13,29 @@
 
 class ml_reducer {
 private:
-
-    const float q {};  // confidence niveau
     MISConfig mis_config;
-
     BoosterHandle booster;
+
+    graph_access original_graph, G;
+    std::vector<bool> exists;
+
+    std::vector<graph_access> reduced_graphs;
+    std::vector<std::vector<NodeID>> reverse_mappings;
+    std::vector<std::vector<NodeID>> forced;
 
 public:
     explicit ml_reducer(MISConfig mis_config, float q, const std::string& model_filepath = "../models/latest.model");
     ~ml_reducer() noexcept(false);
 
     void train_model();
-    void ml_reduce_old(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping);
-    NodeWeight ml_reduce(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping);
+    // void ml_reduce_old(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping);
+    void build_reduced_graph(graph_access &R);
+    NodeWeight ml_reduce();
     NodeWeight iterative_reduce(graph_access& original_graph);
 
     void save_model();
+
+    void apply_solution();
 };
 
 

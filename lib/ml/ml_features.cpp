@@ -39,7 +39,7 @@ int ml_features::getNumberOfFeatures() {
 }
 
 void ml_features::fromPaths(const std::vector<std::string> &all_graph_paths, const std::vector<std::string>& all_label_paths) {
-    assert((graph_paths.size() == label_paths.size()) && "Error: provide same number of graph and label paths\n");
+    assert((all_graph_paths.size() == all_label_paths.size()) && "Error: provide same number of graph and label paths\n");
 
     std::vector<std::string> graph_paths;
     std::vector<std::string> label_paths;
@@ -143,6 +143,7 @@ void ml_features::features(graph_access& G) {
 
     // TODO: log correctly
     for (int round = 0; round < ls_rounds; ++round) {
+        // TODO: only reduce the graph once, then perform the LS rounds with different seeds
         mis_config.seed = (int) rd();
         std::cout << "LOG: ml-features: starting ls round " << round << " ... " << std::flush;
         t.restart();
