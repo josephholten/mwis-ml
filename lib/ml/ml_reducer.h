@@ -24,14 +24,14 @@ private:
     std::vector<std::vector<NodeID>> forced;
 
 public:
-    explicit ml_reducer(MISConfig mis_config, float q, const std::string& model_filepath = "../models/latest.model");
+    explicit ml_reducer(graph_access& original_graph, MISConfig mis_config, const std::string& model_filepath = "../models/latest.model");
     ~ml_reducer() noexcept(false);
 
     void train_model();
     // void ml_reduce_old(graph_access& G, graph_access& R, std::vector<NodeID>& reverse_mapping);
     void build_reduced_graph(graph_access &R);
     NodeWeight ml_reduce();
-    NodeWeight iterative_reduce(graph_access& original_graph);
+    NodeWeight iterative_reduce();
 
     void save_model();
 

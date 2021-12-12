@@ -17,9 +17,7 @@
 #include "tools/io_wrapper.h"
 #include "ml_features.h"
 
-ml_reducer::ml_reducer(MISConfig _mis_config, const float _q, const std::string& model_filepath /* = "../models/latest.model" */) : mis_config {std::move(_mis_config)} {
-    mis_config.q = _q;
-
+ml_reducer::ml_reducer(graph_access& _original_graph, MISConfig _mis_config, const std::string& model_filepath /* = "../models/latest.model" */) : mis_config {std::move(_mis_config)} {
     // init booster
     safe_xgboost(XGBoosterCreate(nullptr, 0, &booster));
     safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
@@ -290,7 +288,7 @@ void ml_reducer::apply_solution() {
     is_IS(original_graph);
 }
 
-NodeWeight ml_reducer::iterative_reduce(graph_access& _original_graph) {
+NodeWeight ml_reducer::iterative_reduce() {
     original_graph = _original_graph;
     G = _original_graph;
     graph_access R;
