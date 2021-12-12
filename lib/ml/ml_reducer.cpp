@@ -323,6 +323,8 @@ NodeWeight ml_reducer::iterative_reduce(graph_access& _original_graph) {
         R.copy(G);
     }
 
+    std::cout << "MIS weight " << current_weight;
+
     // apply_solution();
 
     return 0;
