@@ -25,6 +25,7 @@ private:
 
 public:
     explicit ml_reducer(graph_access& original_graph, MISConfig mis_config, const std::string& model_filepath = "../models/latest.model");
+    explicit ml_reducer(MISConfig mis_config);
     ~ml_reducer() noexcept(false);
 
     void train_model();

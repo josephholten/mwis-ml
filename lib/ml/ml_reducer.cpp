@@ -31,6 +31,13 @@ ml_reducer::ml_reducer(graph_access& _original_graph, MISConfig _mis_config, con
     assert(num_of_features == ml_features::FEATURE_NUM);
 }
 
+ml_reducer::ml_reducer(MISConfig _mis_config) : mis_config {std::move(_mis_config)} {
+    // init booster
+    safe_xgboost(XGBoosterCreate(nullptr, 0, &booster));
+    safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
+    safe_xgboost(XGBoosterSetParam(booster, "nthread", "16"));
+}
+
 ml_reducer::~ml_reducer() noexcept(false) {
     safe_xgboost(XGBoosterFree(booster));
 }

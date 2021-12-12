@@ -7,10 +7,11 @@
 
 int main(int argn, char** argv) {
     MISConfig mis_config;
+    mis_config.q = 0.95;
 
     // parse parameters
 
-    ml_reducer reducer(mis_config, 0.95);
+    ml_reducer reducer(mis_config);
     reducer.train_model();
     reducer.save_model();
 }
