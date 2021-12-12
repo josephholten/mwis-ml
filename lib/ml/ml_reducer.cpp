@@ -9,7 +9,6 @@
 
 #include <fstream>
 #include <wmis_interface/weighted_ls.h>
-#include <graph_io.h>
 
 #include "mis_config.h"
 #include "graph_access.h"
@@ -18,6 +17,8 @@
 #include "ml_features.h"
 
 ml_reducer::ml_reducer(graph_access& _original_graph, MISConfig _mis_config, const std::string& model_filepath /* = "../models/latest.model" */) : mis_config {std::move(_mis_config)} {
+    original_graph = _original_graph;
+    G = original_graph;
     // init booster
     safe_xgboost(XGBoosterCreate(nullptr, 0, &booster));
     safe_xgboost(XGBoosterSetParam(booster, "eta", "1"));
@@ -289,8 +290,6 @@ void ml_reducer::apply_solution() {
 }
 
 NodeWeight ml_reducer::iterative_reduce() {
-    original_graph = _original_graph;
-    G = _original_graph;
     graph_access R;
     NodeWeight current_weight = 0;
 
