@@ -35,6 +35,5 @@ int main(int argn, char** argv) {
     auto weight = reducer.iterative_reduce();
     std::cout << "Found independent set of weight: " << weight << std::endl;
 
-    graph_io::writeIndependentSet(G, "/home/joseph/sem5/christian/mwis-ml/independent_set.mis");
-    //graph_io::writeGraphWeighted(R, mis_config.output_filename);
+    // graph_io::writeIndependentSet(G, "/home/joseph/sem5/christian/mwis-ml/independent_set.mis");
 }

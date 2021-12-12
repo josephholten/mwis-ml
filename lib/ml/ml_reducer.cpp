@@ -327,9 +327,9 @@ NodeWeight ml_reducer::iterative_reduce() {
         R.copy(G);
     }
 
-    std::cout << "MIS weight " << current_weight;
+    std::cout << "MIS weight " << current_weight << std::endl;
 
     // apply_solution();
 
-    return 0;
+    return current_weight;
 }
